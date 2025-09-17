@@ -34,6 +34,7 @@ register_tortoise(
 
 @app.get("/")
 async def root():
+    # This is the root endpoint
     return {"message": "FastAPI + Tortoise ORM is running!"}
 
 @app.get("/users/", response_model=List[UserOut_Pydantic])
