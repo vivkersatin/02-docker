@@ -1,7 +1,7 @@
 # app/api/users.py
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from tortoise.exceptions import DoesNotExist, IntegrityError
+from tortoise.exceptions import DoesNotExist, IntegrityError # type: ignore
 
 from models import User
 from schemas import UserIn_Pydantic, UserOut_Pydantic, UserUpdate
@@ -10,7 +10,7 @@ from security import get_current_user, pwd_context
 router = APIRouter()
 
 @router.post("/", response_model=UserOut_Pydantic, status_code=201)
-async def create_user(user: UserIn_Pydantic):
+async def create_user(user: UserIn_Pydantic): # type: ignore
     try:
         user_data = user.dict(exclude_unset=True)
         user_data["password"] = pwd_context.hash(user_data["password"])

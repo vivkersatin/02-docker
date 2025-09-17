@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from tortoise.contrib.fastapi import register_tortoise # type: ignore
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import auth, users # type: ignore
+import auth, users
 
 # --- FastAPI 應用程式實例 ---
 app = FastAPI(title="My FastAPI Project")

@@ -2,7 +2,7 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from tortoise.exceptions import DoesNotExist
+from tortoise.exceptions import DoesNotExist # type: ignore
 
 from models import User
 from schemas import Token

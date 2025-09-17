@@ -1,6 +1,6 @@
 # app/schemas.py
 from pydantic import BaseModel
-from tortoise.contrib.pydantic import pydantic_model_creator
+from tortoise.contrib.pydantic import pydantic_model_creator # type: ignore
 from models import User
 
 # --- Pydantic Models for API ---
