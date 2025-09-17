@@ -1,36 +1,58 @@
 services:
+  # 資料庫服務 (PostgreSQL)
   db:
     image: postgres:15
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: fastapi_db
+    # 將資料庫資料持久化到 volume，防止容器重啟後資料遺失
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # 將容器的 5432 端口映射到主機，方便外部工具連接 (可選)
     ports:
       - "5432:5432"
+    # 健康檢查，確保資料庫服務正常運行後，依賴它的服務才能啟動
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d fastapi_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
+  # 前端服務 (Nginx)
   frontend:
     build:
       context: ./frontend
+    # 將主機的 8080 端口映射到容器的 80 端口
     ports:
       - "8080:80"
+    # 將自訂的 Nginx 設定檔掛載到容器中
     volumes:
       - ./frontend/default.conf:/etc/nginx/conf.d/default.conf:ro
+    # 依賴於 api 服務
     depends_on:
       - api
 
+  # 後端 API 服務 (FastAPI)
   api:
     build:
       context: ./app
+    # 將主機的 8000 端口映射到容器的 8000 端口
     ports:
       - "8000:8000"
+    # 將本地 app 目錄掛載到容器的 /app 目錄，實現程式碼熱重載 (開發時方便)
     volumes:
       - ./app:/app
+    # 覆寫 Dockerfile 中的 CMD，在開發時啟用 --reload 功能
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    # 依賴於 db 服務，並等待其 healthcheck 狀態為 healthy
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    # 設定 API 連接資料庫所需的環境變數
     environment:
       DB_URL: postgres://user:password@db:5432/fastapi_db
 
+# 定義具名 volume
 volumes:
   postgres_data:

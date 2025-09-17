@@ -37,17 +37,20 @@
     </div>
 
     <script>
+        // 在全域範圍內儲存 access token
         let accessToken = null;
 
+        // --- 監聽登入表單的提交事件 ---
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
             event.preventDefault();
             const form = event.target;
             const resultDiv = document.getElementById('result');
             const profileDiv = document.getElementById('profile');
             const userActionsDiv = document.getElementById('user-actions');
+            // 將表單資料轉換為 URL-encoded 格式
             const formData = new URLSearchParams(new FormData(form));
 
-            // 重設先前的結果
+            // 重設 UI 狀態
             resultDiv.textContent = '';
             profileDiv.textContent = '';
             userActionsDiv.style.display = 'none';
@@ -60,6 +63,7 @@
 
                 const data = await response.json();
 
+                // 根據 API 回應更新 UI
                 if (response.ok) {
                     accessToken = data.access_token;
                     resultDiv.style.color = 'green';
@@ -77,6 +81,7 @@
             }
         });
 
+        // --- 監聽「取得個人資料」按鈕的點擊事件 ---
         document.getElementById('getMeBtn').addEventListener('click', async function() {
             const profileDiv = document.getElementById('profile');
             profileDiv.textContent = '正在取得資料...';
@@ -87,6 +92,7 @@
                     headers: { 'Authorization': 'Bearer ' + accessToken }
                 });
                 const data = await response.json();
+                // 將從 API 獲取的資料顯示在頁面上
                 profileDiv.style.color = response.ok ? 'black' : 'red';
                 profileDiv.innerHTML = response.ok 
                     ? `<h4>使用者資訊：</h4><pre>${JSON.stringify(data, null, 2)}</pre>`
@@ -97,12 +103,13 @@
             }
         });
 
+        // --- 監聽「登出」按鈕的點擊事件 ---
         document.getElementById('logoutBtn').addEventListener('click', function() {
             const resultDiv = document.getElementById('result');
             const profileDiv = document.getElementById('profile');
             const userActionsDiv = document.getElementById('user-actions');
 
-            accessToken = null; // 核心：清除客戶端的 token
+            accessToken = null; // 登出的核心邏輯：清除客戶端儲存的 token
 
             resultDiv.style.color = 'black';
             resultDiv.textContent = '您已成功登出。';
