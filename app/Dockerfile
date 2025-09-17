@@ -8,8 +8,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 只複製應用程式相關的程式碼到工作目錄中
-COPY app/ .
+# 將 app 目錄的內容複製到工作目錄中
+COPY app/. .
 
 # 執行 uvicorn 伺服器，並啟用自動重載
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
