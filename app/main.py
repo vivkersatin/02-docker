@@ -1,14 +1,19 @@
 # app/main.py
 import os
 from fastapi import FastAPI, HTTPException
-from tortoise.contrib.fastapi import register_tortoise
-from tortoise.contrib.pydantic import pydantic_model_creator
+from tortoise.contrib.fastapi import register_tortoise # type: ignore
+from tortoise.contrib.pydantic import pydantic_model_creator # type: ignore
 from typing import List
-from tortoise.exceptions import DoesNotExist, IntegrityError
+from tortoise.exceptions import DoesNotExist, IntegrityError # type: ignore
 from pydantic import BaseModel
+from passlib.context import CryptContext
 from models import User
 
 app = FastAPI()
+
+# 設定密碼雜湊的上下文
+# 我們指定 bcrypt 為預設的雜湊演算法
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 用於 PATCH 更新的 Pydantic 模型，所有欄位都是可選的
 class UserUpdate(BaseModel):
@@ -58,11 +63,10 @@ async def update_user(user_id: int, user_update: UserUpdate):
     # 取得客戶端實際傳送的欄位
     update_data = user_update.dict(exclude_unset=True)
 
-    # 再次提醒：密碼應進行雜湊處理
+    # 如果提供了新密碼，則進行雜湊處理
     if "password" in update_data and update_data["password"]:
-        # 在真實應用中，應在此處對 update_data["password"] 進行雜湊
-        # 例如: update_data["password"] = pwd_context.hash(update_data["password"])
-        pass
+        hashed_password = pwd_context.hash(update_data["password"])
+        update_data["password"] = hashed_password
 
     try:
         if update_data:  # 僅在有提供更新資料時才執行
@@ -73,10 +77,14 @@ async def update_user(user_id: int, user_update: UserUpdate):
     return db_user
 
 @app.post("/users/", response_model=UserOut_Pydantic)
-async def create_user(user: UserIn_Pydantic):
+async def create_user(user: UserIn_Pydantic): # type: ignore
     try:
-        # 重要：在真實世界的應用中，你必須在儲存前對密碼進行雜湊處理。
-        user_obj = await User.create(**user.dict(exclude_unset=True))
+        user_data = user.dict(exclude_unset=True)
+        # 對密碼進行雜湊
+        hashed_password = pwd_context.hash(user_data["password"])
+        user_data["password"] = hashed_password
+        
+        user_obj = await User.create(**user_data)
         return user_obj
     except IntegrityError:
         raise HTTPException(status_code=400, detail=f"Username '{user.username}' already exists.")
