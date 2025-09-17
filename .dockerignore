@@ -1,0 +1,27 @@
+# Docker-specific files
+.dockerignore
+docker-compose.yml
+
+# Git repository files
+.git
+.gitignore
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python virtual environment
+.venv
+venv
+
+# IDE/Editor configuration
+.idea/
+.vscode/
+
+# Environment variables file (should not be in the image)
+.env
+
+# Database data volume (definitely should not be copied)
+postgres_data/

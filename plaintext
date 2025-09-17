@@ -1,0 +1,10 @@
+project/
+├── app/
+│   ├── main.py            # FastAPI 主程式
+│   ├── models.py          # Tortoise ORM 資料模型
+│   ├── schemas.py         # Pydantic 資料驗證
+│   ├── routes.py          # API 路由
+│   ├── config.py          # 設定檔（DB連線等）
+│   └── requirements.txt   # 套件清單
+├── Dockerfile             # API 容器設定
+├── docker-compose.yml     # 整合 API + DB
