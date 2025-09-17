@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登入</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; margin: 0; }
+        .login-container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+        form { display: flex; flex-direction: column; }
+        input { margin-bottom: 1rem; padding: 0.7rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 0.8rem; font-size: 1rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
+        #result { margin-top: 1rem; padding: 1rem; background-color: #e9ecef; border-radius: 4px; word-break: break-all; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>API 登入</h2>
+        <form id="loginForm">
+            <input type="text" id="username" name="username" placeholder="使用者名稱" required>
+            <input type="password" id="password" name="password" placeholder="密碼" required>
+            <button type="submit">登入</button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const form = event.target;
+            const resultDiv = document.getElementById('result');
+            const formData = new URLSearchParams(new FormData(form));
+
+            try {
+                const response = await fetch('http://localhost:8000/auth/token', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await response.json();
+                resultDiv.style.color = response.ok ? 'green' : 'red';
+                resultDiv.textContent = response.ok ? '登入成功！Token: ' + data.access_token : '錯誤: ' + (data.detail || '登入失敗');
+            } catch (error) {
+                resultDiv.style.color = 'red';
+                resultDiv.textContent = '網路或伺服器錯誤。API 服務是否正在執行？';
+            }
+        });
+    </script>
+</body>
+</html>

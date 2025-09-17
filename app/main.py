@@ -2,11 +2,26 @@
 import os
 from fastapi import FastAPI
 from tortoise.contrib.fastapi import register_tortoise # type: ignore
+from fastapi.middleware.cors import CORSMiddleware
 
-from api import auth, users
+from api import auth, users # type: ignore
 
 # --- FastAPI 應用程式實例 ---
 app = FastAPI(title="My FastAPI Project")
+
+# --- CORS Middleware ---
+# 允許來自我們新前端服務的跨來源請求
+origins = [
+    "http://localhost:8080",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- 資料庫設定 ---
 DB_URL = os.getenv("DB_URL", "postgres://user:password@db:5432/fastapi_db")
