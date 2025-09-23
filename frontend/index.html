@@ -31,14 +31,60 @@
         <div id="user-actions">
             <button id="getMeBtn">取得個人資料</button>
             <button id="logoutBtn">登出</button>
+            <button id="manageBooksBtn" style="background-color: #17a2b8; color: white; display: none;">管理書籍</button>
         </div>
         <div id="result"></div>
         <div id="profile"></div>
     </div>
 
+    <!-- 書籍管理介面 -->
+    <div id="books-management-container" style="display: none;" class="login-container">
+        <h2>書籍管理</h2>
+        <button id="addBookBtn" class="btn btn-primary mb-3">新增書籍</button>
+        <div id="booksList"></div>
+        <button id="backToLoginBtn" class="btn btn-secondary mt-3">返回登入頁面</button>
+    </div>
+
+    <!-- 新增/編輯書籍模態框 -->
+    <div id="bookModal" class="modal" style="display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+        <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%;">
+            <span class="close-button" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h3 id="modalTitle"></h3>
+            <form id="bookForm">
+                <input type="hidden" id="bookId">
+                <p>
+                    <label for="title">標題</label>
+                    <input type="text" id="bookTitle" placeholder="書籍標題" required>
+                </p>
+                <p>
+                    <label for="author">作者</label>
+                    <input type="text" id="bookAuthor" placeholder="作者" required>
+                </p>
+                <p>
+                    <label for="published_year">出版年份</label>
+                    <input type="number" id="bookPublishedYear" placeholder="出版年份" required>
+                </p>
+                <button type="submit">儲存</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         // 在全域範圍內儲存 access token
         let accessToken = null;
+
+        // 頁面載入時檢查登入狀態
+        document.addEventListener('DOMContentLoaded', function() {
+            const userActionsDiv = document.getElementById('user-actions');
+            const manageBooksBtn = document.getElementById('manageBooksBtn');
+            if (accessToken) {
+                userActionsDiv.style.display = 'flex';
+                manageBooksBtn.style.display = 'inline-block';
+            } else {
+                userActionsDiv.style.display = 'none';
+                manageBooksBtn.style.display = 'none';
+            }
+        });
 
         // --- 監聽登入表單的提交事件 ---
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
@@ -56,7 +102,7 @@
             userActionsDiv.style.display = 'none';
 
             try {
-                const response = await fetch('http://localhost:8000/auth/token', {
+                const response = await fetch('http://localhost:8001/auth/token', {
                     method: 'POST',
                     body: formData,
                 });
@@ -69,6 +115,7 @@
                     resultDiv.style.color = 'green';
                     resultDiv.textContent = '登入成功！已取得 Token。';
                     userActionsDiv.style.display = 'flex'; // 顯示按鈕區塊
+                    document.getElementById('manageBooksBtn').style.display = 'inline-block'; // 顯示管理書籍按鈕
                 } else {
                     accessToken = null;
                     resultDiv.style.color = 'red';
@@ -87,7 +134,7 @@
             profileDiv.textContent = '正在取得資料...';
 
             try {
-                const response = await fetch('http://localhost:8000/users/me', {
+                const response = await fetch('http://localhost:8001/users/me', {
                     method: 'GET',
                     headers: { 'Authorization': 'Bearer ' + accessToken }
                 });
@@ -95,8 +142,8 @@
                 // 將從 API 獲取的資料顯示在頁面上
                 profileDiv.style.color = response.ok ? 'black' : 'red';
                 profileDiv.innerHTML = response.ok 
-                    ? `<h4>使用者資訊：</h4><pre>${JSON.stringify(data, null, 2)}</pre>`
-                    : `錯誤: ${data.detail || '無法取得使用者資訊'}`;
+                    ? `<h4>使用者資訊：</h4><pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>`
+                    : `錯誤: ${escapeHtml(data.detail || '無法取得使用者資訊')}`;
             } catch (error) {
                 profileDiv.style.color = 'red';
                 profileDiv.textContent = '網路或伺服器錯誤。';
@@ -117,6 +164,242 @@
 
             // 隱藏操作按鈕
             userActionsDiv.style.display = 'none';
+            document.getElementById('manageBooksBtn').style.display = 'none'; // 隱藏管理書籍按鈕
+        });
+
+        // --- 監聽「管理書籍」按鈕的點擊事件 ---
+        document.getElementById('manageBooksBtn').addEventListener('click', showBooksManagement);
+
+        // --- 監聽「返回登入頁面」按鈕的點擊事件 (在書籍管理介面) ---
+        document.getElementById('backToLoginBtn').addEventListener('click', function() {
+            logout();
+            document.getElementById('loginForm').style.display = 'flex';
+            document.getElementById('user-actions').style.display = 'none';
+            document.getElementById('books-management-container').style.display = 'none';
+        });
+
+        // --- 登出函數 ---
+        function logout() {
+            const resultDiv = document.getElementById('result');
+            const profileDiv = document.getElementById('profile');
+            const userActionsDiv = document.getElementById('user-actions');
+            const loginContainer = document.querySelector('.login-container'); // 獲取登入容器
+
+            accessToken = null; // 清除客戶端儲存的 token
+
+            resultDiv.style.color = 'black';
+            resultDiv.textContent = '您已成功登出。';
+            profileDiv.textContent = '';
+
+            // 隱藏操作按鈕
+            userActionsDiv.style.display = 'none';
+            document.getElementById('manageBooksBtn').style.display = 'none'; // 隱藏管理書籍按鈕
+            loginContainer.style.display = 'block'; // 確保登入表單可見
+        }
+
+        // --- 顯示書籍管理介面函數 ---
+        async function showBooksManagement() {
+            document.querySelector('.login-container').style.display = 'none'; // 隱藏登入表單
+            document.getElementById('user-actions').style.display = 'none'; // 隱藏使用者操作按鈕
+            document.getElementById('books-management-container').style.display = 'block'; // 顯示書籍管理介面
+
+            await fetchBooks(); // 載入書籍列表
+        }
+
+        // --- 獲取並渲染書籍列表函數 ---
+        async function fetchBooks() {
+            const booksListDiv = document.getElementById('booksList');
+            booksListDiv.innerHTML = '正在載入書籍...';
+
+            try {
+                const response = await fetch('http://localhost:8001/api/books', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                const books = await response.json();
+
+                if (response.ok) {
+                    if (books.length > 0) {
+                        let tableHtml = `
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>標題</th>
+                                        <th>作者</th>
+                                        <th>出版年份</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        books.forEach(book => {
+                            tableHtml += `
+                                <tr>
+                                    <td>${escapeHtml(book.id)}</td>
+                                    <td>${escapeHtml(book.title)}</td>
+                                    <td>${escapeHtml(book.author)}</td>
+                                    <td>${escapeHtml(book.published_year)}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info edit-book-btn" data-id="${book.id}">編輯</button>
+                                        <button class="btn btn-sm btn-danger delete-book-btn" data-id="${book.id}">刪除</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        tableHtml += `
+                                </tbody>
+                            </table>
+                        `;
+                        booksListDiv.innerHTML = tableHtml;
+
+                        // 添加事件監聽器給編輯和刪除按鈕
+                        document.querySelectorAll('.edit-book-btn').forEach(button => {
+                            button.addEventListener('click', (e) => editBook(e.target.dataset.id));
+                        });
+                        document.querySelectorAll('.delete-book-btn').forEach(button => {
+                            button.addEventListener('click', (e) => deleteBook(e.target.dataset.id));
+                        });
+
+                    } else {
+                        booksListDiv.innerHTML = '<p>目前沒有書籍。</p>';
+                    }
+                } else {
+                    booksListDiv.style.color = 'red';
+                    booksListDiv.innerHTML = '錯誤: ' + (books.detail || '無法獲取書籍列表');
+                }
+            } catch (error) {
+                booksListDiv.style.color = 'red';
+                booksListDiv.innerHTML = '網路或伺服器錯誤。';
+            }
+        }
+
+        // --- 新增書籍函數 ---
+        function addBook() {
+            document.getElementById('modalTitle').textContent = '新增書籍';
+            document.getElementById('bookId').value = '';
+            document.getElementById('bookTitle').value = '';
+            document.getElementById('bookAuthor').value = '';
+            document.getElementById('bookPublishedYear').value = '';
+            document.getElementById('bookModal').style.display = 'block';
+        }
+
+        // --- 編輯書籍函數 ---
+        async function editBook(bookId) {
+            document.getElementById('modalTitle').textContent = '編輯書籍';
+            document.getElementById('bookId').value = bookId;
+
+            try {
+                const response = await fetch(`http://localhost:8001/api/books/${bookId}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                const book = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('bookTitle').value = book.title;
+                    document.getElementById('bookAuthor').value = book.author;
+                    document.getElementById('bookPublishedYear').value = book.published_year;
+                    document.getElementById('bookModal').style.display = 'block';
+                } else {
+                    alert('無法獲取書籍資訊: ' + (book.detail || '未知錯誤'));
+                }
+            } catch (error) {
+                alert('網路或伺服器錯誤。');
+            }
+        }
+
+        // --- 刪除書籍函數 (待實現) ---
+        async function deleteBook(bookId) {
+            if (!confirm('確定要刪除這本書嗎？')) {
+                return;
+            }
+            try {
+                const response = await fetch(`http://localhost:8001/api/books/${bookId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+
+                if (response.ok) {
+                    alert('書籍已成功刪除。');
+                    await fetchBooks(); // 重新載入書籍列表
+                } else {
+                    const data = await response.json();
+                    alert('刪除書籍失敗: ' + (data.detail || '未知錯誤'));
+                }
+            } catch (error) {
+                alert('網路或伺服器錯誤。');
+            }
+        }
+
+        // --- 監聽「新增書籍」按鈕的點擊事件 ---
+        document.getElementById('addBookBtn').addEventListener('click', addBook);
+
+        // --- 監聽模態框關閉按鈕 ---
+        document.querySelector('.close-button').addEventListener('click', function() {
+            document.getElementById('bookModal').style.display = 'none';
+        });
+
+        // --- 監聽模態框外部點擊關閉 ---
+        window.addEventListener('click', function(event) {
+            if (event.target == document.getElementById('bookModal')) {
+                document.getElementById('bookModal').style.display = 'none';
+            }
+        });
+
+        // --- HTML 轉義函數，用於防範 XSS ---
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') {
+                return unsafe; // 如果不是字串，直接返回
+            }
+            return unsafe
+                .replace(/&/g, "&")
+                .replace(/</g, "<")
+                .replace(/>/g, ">")
+                .replace(/"/g, """)
+                .replace(/'/g, "&#039;");
+        }
+
+        // --- 監聽書籍表單提交事件 ---
+        document.getElementById('bookForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const bookId = document.getElementById('bookId').value;
+            const title = document.getElementById('bookTitle').value;
+            const author = document.getElementById('bookAuthor').value;
+            const published_year = parseInt(document.getElementById('bookPublishedYear').value);
+
+            const bookData = { title, author, published_year };
+
+            let url = 'http://localhost:8001/api/books';
+            let method = 'POST';
+
+            if (bookId) {
+                url = `http://localhost:8001/api/books/${bookId}`;
+                method = 'PUT';
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + accessToken
+                    },
+                    body: JSON.stringify(bookData)
+                });
+
+                if (response.ok) {
+                    alert('書籍已成功儲存。');
+                    document.getElementById('bookModal').style.display = 'none';
+                    await fetchBooks(); // 重新載入書籍列表
+                } else {
+                    const data = await response.json();
+                    alert('儲存書籍失敗: ' + (data.detail || '未知錯誤'));
+                }
+            } catch (error) {
+                alert('網路或伺服器錯誤。');
+            }
         });
     </script>
 </body>

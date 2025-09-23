@@ -1,58 +1,58 @@
+# c:\learn2\02-docker\docker-compose.yml
+
 services:
-  # 資料庫服務 (PostgreSQL)
   db:
-    image: postgres:15
+    image: postgres:13-alpine
+    container_name: fastapi_db
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: fastapi_db
-    # 將資料庫資料持久化到 volume，防止容器重啟後資料遺失
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # 將容器的 5432 端口映射到主機，方便外部工具連接 (可選)
     ports:
-      - "5432:5432"
-    # 健康檢查，確保資料庫服務正常運行後，依賴它的服務才能啟動
+      - "5432:5432" # Optional: Expose DB port for local access/debugging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d fastapi_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # 前端服務 (Nginx)
-  frontend:
-    build:
-      context: ./frontend
-    # 將主機的 8080 端口映射到容器的 80 端口
-    ports:
-      - "8080:80"
-    # 將自訂的 Nginx 設定檔掛載到容器中
+  web:
+    build: .
+    container_name: fastapi_web_app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # --reload for development
     volumes:
-      - ./frontend/default.conf:/etc/nginx/conf.d/default.conf:ro
-    # 依賴於 api 服務
+      - .:/app # Mount the current directory into the container for live reloading
+    ports:
+      - "8001:8000" # 將主機的 8001 埠口映射到容器的 8000 埠口
+    environment:
+      DB_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      SECRET_KEY: ${SECRET_KEY}
     depends_on:
-      - api
+      db:
+        condition: service_healthy # Ensure DB is ready before starting web app
 
-  # 後端 API 服務 (FastAPI)
-  api:
-    build:
-      context: ./app
-    # 將主機的 8000 端口映射到容器的 8000 端口
+  frontend:
+    build: ./frontend
+    container_name: fastapi_frontend
     ports:
-      - "8000:8000"
-    # 將本地 app 目錄掛載到容器的 /app 目錄，實現程式碼熱重載 (開發時方便)
+      - "8080:80" # 將主機的 8080 埠口映射到容器的 80 埠口
     volumes:
-      - ./app:/app
-    # 覆寫 Dockerfile 中的 CMD，在開發時啟用 --reload 功能
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    # 依賴於 db 服務，並等待其 healthcheck 狀態為 healthy
+      - ./frontend:/usr/share/nginx/html # Mount the frontend directory into the container
+
+  create_user:
+    build: .
+    container_name: create_user_service
+    command: python create_user.py
+    volumes:
+      - .:/app
+    environment:
+      DB_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy
-    # 設定 API 連接資料庫所需的環境變數
-    environment:
-      DB_URL: postgres://user:password@db:5432/fastapi_db
+    profiles: ["create_user"] # Use a profile to run this service only when explicitly requested
 
-# 定義具名 volume
 volumes:
   postgres_data:

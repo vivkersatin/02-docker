@@ -3,7 +3,6 @@ uvicorn[standard]
 tortoise-orm
 asyncpg
 python-dotenv
-passlib
-bcrypt
+passlib[bcrypt]
 python-jose[cryptography]
 python-multipart

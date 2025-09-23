@@ -6,9 +6,12 @@ import os
 from fastapi import FastAPI
 from tortoise.contrib.fastapi import register_tortoise # type: ignore
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 # 導入 API 路由模組
-import auth, users
+import app.api.auth as auth
+import app.api.users as users
+import app.api.books as books # Import the new books router
 
 app = FastAPI(title="My FastAPI Project")
 
@@ -35,12 +38,13 @@ DB_URL = os.getenv("DB_URL", "postgres://user:password@db:5432/fastapi_db")
 # --- 掛載 Routers ---
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
+app.include_router(books.router, tags=["Books API"]) # Include the books API router
 
 # --- Tortoise ORM 初始化 ---
 register_tortoise(
     app,
     db_url=DB_URL,
-    modules={"models": ["models"]},
+    modules={"models": ["app.api.models"]}, # Point to the correct models file
     generate_schemas=True,
     add_exception_handlers=True,
 )
@@ -49,4 +53,4 @@ register_tortoise(
 @app.get("/")
 async def root():
     """根目錄端點，提供一個歡迎訊息，可用於健康檢查。"""
-    return {"message": "FastAPI + Tortoise ORM is running!"}
+    return {"message": "Welcome to the FastAPI backend!"}

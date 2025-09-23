@@ -7,9 +7,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from tortoise.exceptions import DoesNotExist, IntegrityError # type: ignore
 
-from models import User
-from schemas import UserIn_Pydantic, UserOut_Pydantic, UserUpdate
-from security import get_current_user, pwd_context
+from .models import User # Corrected import: Use relative import for modules within the same package
+from .schemas import UserIn_Pydantic, UserOut_Pydantic, UserUpdate
+from .security import get_current_user, pwd_context
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ router = APIRouter()
 async def create_user(user: UserIn_Pydantic): # type: ignore
     """建立新使用者，並將密碼進行雜湊處理。"""
     try:
-        user_data = user.dict(exclude_unset=True)
+        user_data = user.model_dump(exclude_unset=True)
         # 使用 pwd_context 對密碼進行雜湊
         user_data["password"] = pwd_context.hash(user_data["password"])
         user_obj = await User.create(**user_data)
@@ -56,7 +56,7 @@ async def update_user(user_id: int, user_update: UserUpdate):
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
 
     # 將 Pydantic 模型轉換為字典，並排除未設定的欄位
-    update_data = user_update.dict(exclude_unset=True)
+    update_data = user_update.model_dump(exclude_unset=True)
 
     # 如果請求中包含密碼，則進行雜湊處理
     if "password" in update_data and update_data["password"]:

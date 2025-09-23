@@ -1,21 +1,7 @@
-# Python cache and compiled files
+# Environment files
+.env
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
-
-# Python virtual environment
-.venv
-venv
-env/
-ENV/
-
-# IDE/Editor configuration
-.idea/
-.vscode/
-
-# Environment variables file (should not be in the image)
-.env
-
-# Docker-specific files that don't need to be in git
-postgres_data/
